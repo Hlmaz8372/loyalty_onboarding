@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Loyalty — System Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b0e14;
+  --bg2:#10141d;
+  --surface:#161b26;
+  --surface2:#1c2230;
+  --line:#28303f;
+  --text:#e9edf5;
+  --muted:#8b96ab;
+  --core:#f5b642;
+  --goal:#7dd3fc;
+  --aud:#5eead4;
+  --tools:#a78bfa;
+  --rew:#fb7185;
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root:not([data-theme="dark"]) { }
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f4f6fa; --bg2:#eaeef5; --surface:#ffffff; --surface2:#f7f9fc;
+    --line:#d8dee9; --text:#101521; --muted:#5d6779;
+    --core:#b97d06; --goal:#0b7fb8; --aud:#0d8f7c; --tools:#6d45d9; --rew:#d33b57;
+    --shadow:0 10px 28px rgba(16,21,33,.12);
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f4f6fa; --bg2:#eaeef5; --surface:#ffffff; --surface2:#f7f9fc;
+  --line:#d8dee9; --text:#101521; --muted:#5d6779;
+  --core:#b97d06; --goal:#0b7fb8; --aud:#0d8f7c; --tools:#6d45d9; --rew:#d33b57;
+  --shadow:0 10px 28px rgba(16,21,33,.12);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:
+    radial-gradient(1200px 700px at 50% 0%, var(--bg2), transparent 70%),
+    var(--bg);
+  color:var(--text);
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- canvas ---------- */
+#stage{position:absolute;inset:0;cursor:grab;touch-action:none;overflow:hidden}
+#stage.dragging{cursor:grabbing}
+#world{position:absolute;top:0;left:0;width:3000px;height:1620px;transform-origin:0 0}
+#wires{position:absolute;top:0;left:0;width:3000px;height:1620px;overflow:visible}
+
+.node{
+  position:absolute;
+  transform:translate(-50%,-50%) scale(.85);
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:14px 18px;
+  min-width:150px;
+  text-align:center;
+  box-shadow:var(--shadow);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .5s ease, transform .5s cubic-bezier(.22,1,.36,1), border-color .2s, background .2s;
+  cursor:pointer;
+  user-select:none;
+}
+.node.on{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+.node:hover{background:var(--surface2)}
+.node .lbl{
+  font-family:"Space Grotesk",Inter,sans-serif;
+  font-weight:600;font-size:17px;letter-spacing:-.01em;line-height:1.2;
+}
+.node .sub{font-size:11.5px;color:var(--muted);margin-top:5px;letter-spacing:.02em}
+.node .dot{
+  width:7px;height:7px;border-radius:50%;margin:0 auto 9px;
+  background:var(--line);
+}
+
+.node.core{
+  min-width:230px;padding:26px 30px;border-radius:20px;
+  border-color:color-mix(in srgb, var(--core) 55%, var(--line));
+}
+.node.core .lbl{font-size:34px;font-weight:700;letter-spacing:-.03em}
+.node.core .dot{display:none}
+.node.core .sub{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--core);margin-top:8px}
+
+.node.goal{border-color:color-mix(in srgb, var(--goal) 50%, var(--line));min-width:210px}
+.node.goal .dot{background:var(--goal)}
+.node.goal .lbl{font-size:21px}
+
+.node.hub{min-width:190px;padding:18px 22px;border-radius:16px}
+.node.hub .lbl{font-size:23px;letter-spacing:-.02em}
+.node.hub[data-arm="aud"]{border-color:color-mix(in srgb, var(--aud) 50%, var(--line))}
+.node.hub[data-arm="aud"] .dot{background:var(--aud)}
+.node.hub[data-arm="tools"]{border-color:color-mix(in srgb, var(--tools) 50%, var(--line))}
+.node.hub[data-arm="tools"] .dot{background:var(--tools)}
+.node.hub[data-arm="rew"]{border-color:color-mix(in srgb, var(--rew) 50%, var(--line))}
+.node.hub[data-arm="rew"] .dot{background:var(--rew)}
+
+.node.leaf{min-width:0;width:186px;padding:12px 14px}
+.node.leaf .lbl{font-size:15px;font-weight:500}
+.node.leaf[data-arm="aud"] .dot{background:var(--aud)}
+.node.leaf[data-arm="tools"] .dot{background:var(--tools)}
+.node.leaf[data-arm="rew"] .dot{background:var(--rew)}
+
+.node.sel{border-color:var(--text)}
+
+.wire{fill:none;stroke:var(--line);stroke-width:2;opacity:0;transition:opacity .6s ease;stroke-linecap:round}
+.wire.on{opacity:.9}
+.wire.aud{stroke:color-mix(in srgb, var(--aud) 45%, var(--line))}
+.wire.tools{stroke:color-mix(in srgb, var(--tools) 45%, var(--line))}
+.wire.rew{stroke:color-mix(in srgb, var(--rew) 45%, var(--line))}
+.wire.loop{stroke:color-mix(in srgb, var(--core) 55%, var(--line));stroke-width:2.5;stroke-dasharray:9 8}
+.wire.loop.on{opacity:.85;animation:flow 1.4s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-34}}
+
+.elabel{
+  position:absolute;transform:translate(-50%,-50%);
+  font-family:"Space Grotesk",sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);background:var(--bg);padding:3px 9px;border-radius:999px;border:1px solid var(--line);
+  opacity:0;transition:opacity .5s ease;pointer-events:none;white-space:nowrap;
+}
+.elabel.on{opacity:1}
+
+/* ---------- chrome ---------- */
+.bar{
+  position:absolute;left:0;right:0;
+  display:flex;gap:10px;align-items:center;
+  padding:14px 16px;
+  pointer-events:none;
+  z-index:5;
+}
+.bar.top{top:env(safe-area-inset-top,0px);justify-content:space-between}
+.bar.bottom{bottom:env(safe-area-inset-bottom,0px);justify-content:center;flex-wrap:wrap}
+.bar > *{pointer-events:auto}
+
+.brand{font-family:"Space Grotesk",sans-serif;font-size:13px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.brand b{color:var(--text);font-weight:600}
+
+.btn{
+  font-family:Inter,sans-serif;font-size:13px;font-weight:500;
+  background:var(--surface);color:var(--text);
+  border:1px solid var(--line);border-radius:999px;
+  padding:9px 16px;cursor:pointer;
+  transition:background .15s,border-color .15s,opacity .15s;
+  box-shadow:var(--shadow);
+}
+.btn:hover{background:var(--surface2)}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.primary{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
+.btn.icon{padding:9px 13px;font-size:15px;line-height:1}
+
+.steps{display:flex;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:8px 12px;box-shadow:var(--shadow)}
+.pip{width:22px;height:4px;border-radius:2px;background:var(--line);transition:background .3s;cursor:pointer}
+.pip.done{background:var(--muted)}
+.pip.now{background:var(--text)}
+
+.caption{
+  position:absolute;left:50%;transform:translateX(-50%);
+  bottom:calc(74px + env(safe-area-inset-bottom,0px));
+  max-width:min(620px,88vw);text-align:center;
+  font-size:14px;line-height:1.55;color:var(--muted);
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  padding:11px 18px;box-shadow:var(--shadow);z-index:4;
+  transition:opacity .35s;
+}
+.caption b{color:var(--text);font-weight:600}
+
+/* ---------- detail panel ---------- */
+#panel{
+  position:absolute;top:0;right:0;height:100%;
+  width:min(380px,92vw);
+  background:var(--surface);
+  border-left:1px solid var(--line);
+  padding:calc(26px + env(safe-area-inset-top,0px)) 26px calc(26px + env(safe-area-inset-bottom,0px));
+  transform:translateX(101%);
+  transition:transform .35s cubic-bezier(.22,1,.36,1);
+  z-index:10;overflow-y:auto;
+  box-shadow:-20px 0 50px rgba(0,0,0,.35);
+}
+#panel.open{transform:translateX(0)}
+#panel .kicker{font-family:"Space Grotesk",sans-serif;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+#panel h2{font-family:"Space Grotesk",sans-serif;font-size:28px;letter-spacing:-.02em;margin:8px 0 14px;font-weight:700}
+#panel p{font-size:14.5px;line-height:1.65;color:var(--muted);margin:0 0 14px}
+#panel p.lead{color:var(--text)}
+#panel ul{margin:0 0 16px;padding-left:18px}
+#panel li{font-size:14px;line-height:1.6;color:var(--muted);margin-bottom:7px}
+#panel .close{position:absolute;top:calc(18px + env(safe-area-inset-top,0px));right:18px}
+#panel .tagrow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
+.tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--muted)}
+
+@media (max-width:760px){
+  .brand{display:none}
+  .caption{font-size:13px;padding:9px 14px;bottom:calc(68px + env(safe-area-inset-bottom,0px))}
+  .btn{padding:8px 13px;font-size:12.5px}
+}
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="world">
+    <svg id="wires" viewBox="0 0 3000 1620" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <div id="nodes"></div>
+    <div id="elabels"></div>
+  </div>
+</div>
+
+<div class="bar top">
+  <div class="brand"><b>Loyalty</b> &nbsp;/&nbsp; system map</div>
+  <div style="display:flex;gap:8px">
+    <button class="btn icon" id="zin" title="Zoom in">+</button>
+    <button class="btn icon" id="zout" title="Zoom out">−</button>
+    <button class="btn" id="fit">Fit</button>
+  </div>
+</div>
+
+<div class="caption" id="caption"></div>
+
+<div class="bar bottom">
+  <button class="btn" id="prev">← Back</button>
+  <div class="steps" id="steps"></div>
+  <button class="btn primary" id="next">Next →</button>
+  <button class="btn" id="all">Show all</button>
+</div>
+
+<aside id="panel" aria-live="polite">
+  <button class="btn icon close" id="pclose" aria-label="Close">✕</button>
+  <div class="kicker" id="pkicker"></div>
+  <h2 id="ptitle"></h2>
+  <div class="tagrow" id="ptags"></div>
+  <div id="pbody"></div>
+</aside>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     THE MODEL — edit this block to reshape the map.
+     Everything below it is the engine and never needs touching.
+     ============================================================ */
+
+  const NODES = [
+    { id:'goal', kind:'goal', stage:0, x:1500, y:300, label:'Repeated purchase',
+      sub:'the goal', kicker:'Outcome',
+      tags:['North star','LTV','Retention'],
+      lead:'Everything on this board exists to produce one behaviour: the customer comes back and buys again.',
+      body:['Acquisition is rented. Repeat purchase is owned. A loyalty system is the machinery that converts a one-time buyer into a returning one.',
+            'Every branch here is judged against this node. If a tool does not move repeat rate, average order value, or purchase frequency, it is decoration.'] },
+
+    { id:'loyalty', kind:'core', stage:0, x:1500, y:730, label:'Loyalty',
+      sub:'the system', kicker:'Centre',
+      tags:['Shopify','App','Platform'],
+      lead:'Loyalty is not a points widget. It is a loop with three moving parts.',
+      body:['<b>Audience</b> — who we can reach, and on which channel.',
+            '<b>Tools</b> — the mechanics that create a reason to come back.',
+            '<b>Reward</b> — the value we hand back to make the return worth it.',
+            'Pull any one out and the loop stops turning.'] },
+
+    /* ---- LEFT ARM: audience ---- */
+    { id:'customers', kind:'hub', arm:'aud', stage:1, x:1010, y:730, label:'Customers',
+      sub:'raw base', kicker:'Audience arm',
+      tags:['Identity','Data'],
+      lead:'Every buyer in the store — but an undifferentiated list is not something you can act on.',
+      body:['A customer record is the atom: identity, order history, spend, recency.',
+            'On its own it is inert. It becomes useful the moment you can slice it.'] },
+
+    { id:'audience', kind:'hub', arm:'aud', stage:1, x:620, y:730, label:'Audience',
+      sub:'segmented', kicker:'Audience arm',
+      tags:['Segments','Targeting'],
+      lead:'Customers cut into groups you can actually speak to differently.',
+      body:['New vs. returning. High spenders vs. one-and-done. Lapsed vs. active. Tier members vs. everyone else.',
+            'Segmentation is what makes a message feel aimed instead of blasted — and it is the input every channel below depends on.'] },
+
+    { id:'email', kind:'leaf', arm:'aud', stage:1, x:250, y:540, label:'Email',
+      sub:'owned channel', kicker:'Channel',
+      tags:['Owned','Async'],
+      lead:'The workhorse. Cheap, rich, and yours.',
+      body:['Best for reward balances, tier upgrades, win-back flows and anything that needs layout or a big button.',
+            'Weakness: it competes with a crowded inbox. Wins on relevance, not volume.'] },
+
+    { id:'sms', kind:'leaf', arm:'aud', stage:1, x:250, y:730, label:'SMS',
+      sub:'owned channel', kicker:'Channel',
+      tags:['Owned','Urgent'],
+      lead:'Highest open rate, lowest tolerance for waste.',
+      body:['Reserve for time-boxed value: points expiring, a tier about to lapse, an early-access window.',
+            'One irrelevant text costs the opt-in. Use rarely, land hard.'] },
+
+    { id:'newsletter', kind:'leaf', arm:'aud', stage:1, x:250, y:920, label:'Newsletter',
+      sub:'owned channel', kicker:'Channel',
+      tags:['Owned','Relationship'],
+      lead:'The slow channel — brand and habit rather than conversion.',
+      body:['Keeps the store present between purchases so the loyalty prompt is not the only time you speak.',
+            'Also the cheapest place to teach the programme: how points work, what a tier unlocks.'] },
+
+    /* ---- BOTTOM ARM: tools ---- */
+    { id:'tools', kind:'hub', arm:'tools', stage:2, x:1500, y:1090, label:'Tools',
+      sub:'logic + display', kicker:'Tools arm',
+      tags:['Mechanics','Front end'],
+      lead:'The mechanics that manufacture a reason to return. Each one is two halves.',
+      body:['<b>Logic</b> — the rules on the back end: who qualifies, what accrues, what unlocks, when it expires.',
+            '<b>Display</b> — the storefront surface the shopper actually sees: badge, widget, bar, drawer, page.',
+            'Ship logic without display and nobody knows the programme exists. Ship display without logic and it is a sticker.'] },
+
+    { id:'membership', kind:'leaf', arm:'tools', stage:2, x:330, y:1390, label:'Membership',
+      sub:'logic + display', kicker:'Tool',
+      tags:['Recurring','Gated'],
+      lead:'A paid or earned status that carries standing benefits.',
+      body:['<b>Logic:</b> enrolment, renewal, entitlement checks at cart and checkout.',
+            '<b>Display:</b> member pricing on the product page, a members-only badge, a gated collection.',
+            'Strongest commitment device on the board — a paid member has already pre-decided to come back.'] },
+
+    { id:'wishlist', kind:'leaf', arm:'tools', stage:2, x:765, y:1390, label:'Wishlist',
+      sub:'logic + display', kicker:'Tool',
+      tags:['Intent','Signal'],
+      lead:'Captures intent that was not ready to convert.',
+      body:['<b>Logic:</b> saved items per customer, stock and price watching.',
+            '<b>Display:</b> heart on the product card, saved list in the account area.',
+            'Doubles as the cleanest intent signal you own — a back-in-stock or price-drop nudge on a wishlisted item is the highest-converting message most stores can send.'] },
+
+    { id:'campaign', kind:'leaf', arm:'tools', stage:2, x:1200, y:1390, label:'Campaign',
+      sub:'logic + display', kicker:'Tool',
+      tags:['Time-boxed','Push'],
+      lead:'A time-boxed push: double points weekend, bonus for a category, a seasonal multiplier.',
+      body:['<b>Logic:</b> window, eligibility, multiplier, cap.',
+            '<b>Display:</b> announcement bar, banner, on-site countdown.',
+            'This is the lever you pull when the programme needs a heartbeat instead of a hum.'] },
+
+    { id:'vip', kind:'leaf', arm:'tools', stage:2, x:1635, y:1390, label:'VIP tier',
+      sub:'logic + display', kicker:'Tool',
+      tags:['Status','Progression'],
+      lead:'Status as a reward. Progress bars beat discounts more often than people expect.',
+      body:['<b>Logic:</b> thresholds, accrual window, demotion rules.',
+            '<b>Display:</b> tier badge, progress-to-next-tier bar, perks table.',
+            'Tiers work because the customer can see how close they are — the gap itself is the motivation.'] },
+
+    { id:'program', kind:'leaf', arm:'tools', stage:2, x:2070, y:1390, label:'Program',
+      sub:'logic + display', kicker:'Tool',
+      tags:['Core','Points engine'],
+      lead:'The base points programme — the spine everything else plugs into.',
+      body:['<b>Logic:</b> earn rules (order, review, signup, birthday), redemption rates, expiry.',
+            '<b>Display:</b> balance in the header, earn hints on the product page, redeem step in cart.',
+            'If only one tool ships first, it is this one: the others mostly feed it or dress it.'] },
+
+    { id:'referral', kind:'leaf', arm:'tools', stage:2, x:2505, y:1390, label:'Referral',
+      sub:'logic + display', kicker:'Tool',
+      tags:['Growth','Two-sided'],
+      lead:'The one tool that grows the audience instead of only working it.',
+      body:['<b>Logic:</b> unique link per customer, attribution, two-sided payout, fraud guards.',
+            '<b>Display:</b> share panel in the account area, post-purchase prompt, landing page for the friend.',
+            'Notice what it does on this board: a tool that loops back to Customers, not just to Reward.'] },
+
+    /* ---- RIGHT ARM: reward ---- */
+    { id:'reward', kind:'hub', arm:'rew', stage:3, x:2000, y:730, label:'Reward',
+      sub:'value returned', kicker:'Reward arm',
+      tags:['Value','Margin'],
+      lead:'What the customer actually gets. The tools ask; this answers.',
+      body:['Three shapes, and the choice is a margin decision as much as a marketing one.',
+            'Each one hits the P&L differently and each one has a different pull back to the store.'] },
+
+    { id:'points', kind:'leaf', arm:'rew', stage:3, x:2420, y:540, label:'Points',
+      sub:'reward type', kicker:'Reward',
+      tags:['Deferred','Sticky'],
+      lead:'Abstract, accrued, redeemed later.',
+      body:['Cheapest liability of the three because a large share is never redeemed — and the balance itself is a reason to return.',
+            'Risk: if the exchange rate is unclear or the balance is invisible, points read as fake money and stop motivating.'] },
+
+    { id:'credit', kind:'leaf', arm:'rew', stage:3, x:2420, y:730, label:'Store credit',
+      sub:'reward type', kicker:'Reward',
+      tags:['Locked-in','Native'],
+      lead:'Real balance, spendable only here.',
+      body:['Best retention shape on the board: the value cannot leave the store, so redemption is another visit by definition.',
+            'Shopify handles this natively now, which makes it the least fragile to implement.'] },
+
+    { id:'cashback', kind:'leaf', arm:'rew', stage:3, x:2420, y:920, label:'Cashback',
+      sub:'issued as a code', kicker:'Reward',
+      tags:['Immediate','Discount'],
+      lead:'Value handed back as a discount code after the order.',
+      body:['Feels the most concrete to the shopper and converts the hardest — it reads as money.',
+            'Costs the most in margin and pulls the least, since a code can sit unused with no visible balance nagging at them. Pair it with an expiry.'] }
+  ];
+
+  const EDGES = [
+    { a:'loyalty', b:'goal',   stage:0, cls:'', label:'goal' },
+
+    { a:'loyalty', b:'customers', stage:1, cls:'aud' },
+    { a:'customers', b:'audience', stage:1, cls:'aud' },
+    { a:'audience', b:'email', stage:1, cls:'aud' },
+    { a:'audience', b:'sms', stage:1, cls:'aud' },
+    { a:'audience', b:'newsletter', stage:1, cls:'aud' },
+
+    { a:'loyalty', b:'tools', stage:2, cls:'tools' },
+    { a:'tools', b:'membership', stage:2, cls:'tools' },
+    { a:'tools', b:'wishlist', stage:2, cls:'tools' },
+    { a:'tools', b:'campaign', stage:2, cls:'tools' },
+    { a:'tools', b:'vip', stage:2, cls:'tools' },
+    { a:'tools', b:'program', stage:2, cls:'tools' },
+    { a:'tools', b:'referral', stage:2, cls:'tools' },
+
+    { a:'tools', b:'reward', stage:3, cls:'rew', label:'drive?' },
+    { a:'loyalty', b:'reward', stage:3, cls:'rew' },
+    { a:'reward', b:'points', stage:3, cls:'rew' },
+    { a:'reward', b:'credit', stage:3, cls:'rew' },
+    { a:'reward', b:'cashback', stage:3, cls:'rew' },
+
+    { a:'reward', b:'goal', stage:4, cls:'loop' },
+    { a:'goal', b:'customers', stage:4, cls:'loop', label:'the loop' }
+  ];
+
+  const CAPTIONS = [
+    'Start at the centre. <b>Loyalty</b> exists for exactly one outcome — the customer buys again.',
+    'First branch: <b>who</b>. Customers become an audience the moment you can segment them, and each segment is reachable on a channel.',
+    'Second branch: <b>how</b>. Six tools, each one a piece of back-end <b>logic</b> plus a storefront <b>display</b>.',
+    'Third branch: <b>what they get</b>. The tools drive toward a reward — and the shape of that reward is a margin decision.',
+    'And it closes. Reward drives the repeat purchase, the repeat purchase grows the customer base, and the loop turns again.'
+  ];
+
+  /* ============================================================
+     ENGINE
+     ============================================================ */
+
+  const W = 3000, H = 1620;
+  const byId = {};
+  NODES.forEach(function(n){ byId[n.id] = n; });
+
+  const stageEl = document.getElementById('stage');
+  const worldEl = document.getElementById('world');
+  const wiresEl = document.getElementById('wires');
+  const nodesEl = document.getElementById('nodes');
+  const elabEl  = document.getElementById('elabels');
+  const capEl   = document.getElementById('caption');
+  const stepsEl = document.getElementById('steps');
+  const panel   = document.getElementById('panel');
+
+  const MAXSTAGE = 4;
+  let stage = 0;
+
+  /* ---- build nodes ---- */
+  NODES.forEach(function(n){
+    const el = document.createElement('div');
+    el.className = 'node ' + n.kind + (n.arm ? '' : '');
+    if (n.arm) { el.setAttribute('data-arm', n.arm); }
+    el.setAttribute('data-id', n.id);
+    el.style.left = n.x + 'px';
+    el.style.top  = n.y + 'px';
+    el.innerHTML =
+      '<div class="dot"></div>' +
+      '<div class="lbl">' + n.label + '</div>' +
+      (n.sub ? '<div class="sub">' + n.sub + '</div>' : '');
+    el.addEventListener('click', function(e){
+      e.stopPropagation();
+      openPanel(n.id);
+    });
+    nodesEl.appendChild(el);
+    n._el = el;
+  });
+
+  /* ---- build wires ---- */
+  function pathFor(a, b){
+    const dx = b.x - a.x, dy = b.y - a.y;
+    let c1x, c1y, c2x, c2y;
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      c1x = a.x + dx * 0.45; c1y = a.y;
+      c2x = b.x - dx * 0.45; c2y = b.y;
+    } else {
+      c1x = a.x; c1y = a.y + dy * 0.45;
+      c2x = b.x; c2y = b.y - dy * 0.45;
+    }
+    return 'M ' + a.x + ' ' + a.y + ' C ' + c1x + ' ' + c1y + ', ' + c2x + ' ' + c2y + ', ' + b.x + ' ' + b.y;
+  }
+
+  EDGES.forEach(function(e){
+    const a = byId[e.a], b = byId[e.b];
+    const p = document.createElementNS('http://www.w3.org/2000/svg','path');
+    p.setAttribute('d', pathFor(a,b));
+    p.setAttribute('class', 'wire ' + (e.cls || ''));
+    wiresEl.appendChild(p);
+    e._el = p;
+
+    if (e.label) {
+      const l = document.createElement('div');
+      l.className = 'elabel';
+      l.innerText = e.label;
+      l.style.left = ((a.x + b.x) / 2) + 'px';
+      l.style.top  = ((a.y + b.y) / 2) + 'px';
+      elabEl.appendChild(l);
+      e._lbl = l;
+    }
+  });
+
+  /* ---- steps ---- */
+  const pips = [];
+  for (let i = 0; i <= MAXSTAGE; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'pip';
+    pip.addEventListener('click', (function(idx){
+      return function(){ setStage(idx, true); };
+    })(i));
+    stepsEl.appendChild(pip);
+    pips.push(pip);
+  }
+
+  /* ---- view transform ---- */
+  let tx = 0, ty = 0, sc = 1;
+
+  function apply(){
+    worldEl.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + sc + ')';
+  }
+
+  function fitTo(box, animate){
+    const pad = 110;
+    const vw = stageEl.clientWidth, vh = stageEl.clientHeight;
+    const topPad = 80, botPad = 150;
+    const availW = vw - pad * 2;
+    const availH = vh - topPad - botPad;
+    const s = Math.min(availW / box.w, availH / box.h, 1.35);
+    const target = Math.max(0.12, s);
+    const cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+    const ntx = vw / 2 - cx * target;
+    const nty = (topPad + availH / 2) - cy * target;
+    if (animate) {
+      worldEl.style.transition = 'transform .7s cubic-bezier(.22,1,.36,1)';
+      setTimeout(function(){ worldEl.style.transition = ''; }, 720);
+    }
+    tx = ntx; ty = nty; sc = target;
+    apply();
+  }
+
+  function visibleBox(){
+    let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    NODES.forEach(function(n){
+      if (n.stage > stage) { return; }
+      const r = n._el.getBoundingClientRect();
+      const halfW = (r.width / sc) / 2 || 110;
+      const halfH = (r.height / sc) / 2 || 40;
+      minX = Math.min(minX, n.x - halfW); maxX = Math.max(maxX, n.x + halfW);
+      minY = Math.min(minY, n.y - halfH); maxY = Math.max(maxY, n.y + halfH);
+    });
+    if (minX > maxX) { return { x:0, y:0, w:W, h:H }; }
+    return { x:minX, y:minY, w:maxX - minX, h:maxY - minY };
+  }
+
+  /* ---- stage control ---- */
+  function setStage(s, animate){
+    stage = Math.max(0, Math.min(MAXSTAGE, s));
+    NODES.forEach(function(n){ n._el.classList.toggle('on', n.stage <= stage); });
+    EDGES.forEach(function(e){
+      e._el.classList.toggle('on', e.stage <= stage);
+      if (e._lbl) { e._lbl.classList.toggle('on', e.stage <= stage); }
+    });
+    pips.forEach(function(p,i){
+      p.classList.toggle('done', i < stage);
+      p.classList.toggle('now', i === stage);
+    });
+    capEl.innerHTML = CAPTIONS[stage] || '';
+    document.getElementById('prev').disabled = (stage === 0);
+    document.getElementById('next').disabled = (stage === MAXSTAGE);
+    requestAnimationFrame(function(){ fitTo(visibleBox(), animate !== false); });
+  }
+
+  /* ---- panel ---- */
+  function openPanel(id){
+    const n = byId[id];
+    if (!n) { return; }
+    document.querySelectorAll('.node.sel').forEach(function(el){ el.classList.remove('sel'); });
+    n._el.classList.add('sel');
+    document.getElementById('pkicker').innerText = n.kicker || '';
+    document.getElementById('ptitle').innerText = n.label;
+    const tags = document.getElementById('ptags');
+    tags.innerHTML = '';
+    (n.tags || []).forEach(function(t){
+      const s = document.createElement('span');
+      s.className = 'tag';
+      s.innerText = t;
+      tags.appendChild(s);
+    });
+    let html = n.lead ? '<p class="lead">' + n.lead + '</p>' : '';
+    (n.body || []).forEach(function(par){ html += '<p>' + par + '</p>'; });
+    document.getElementById('pbody').innerHTML = html;
+    panel.classList.add('open');
+  }
+
+  function closePanel(){
+    panel.classList.remove('open');
+    document.querySelectorAll('.node.sel').forEach(function(el){ el.classList.remove('sel'); });
+  }
+
+  document.getElementById('pclose').addEventListener('click', closePanel);
+
+  /* ---- pan / zoom ---- */
+  let dragging = false, lastX = 0, lastY = 0, moved = 0;
+
+  stageEl.addEventListener('pointerdown', function(e){
+    dragging = true; moved = 0;
+    lastX = e.clientX; lastY = e.clientY;
+    stageEl.classList.add('dragging');
+    stageEl.setPointerCapture(e.pointerId);
+  });
+
+  stageEl.addEventListener('pointermove', function(e){
+    if (!dragging) { return; }
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    moved += Math.abs(dx) + Math.abs(dy);
+    tx += dx; ty += dy;
+    lastX = e.clientX; lastY = e.clientY;
+    apply();
+  });
+
+  function endDrag(){ dragging = false; stageEl.classList.remove('dragging'); }
+  stageEl.addEventListener('pointerup', function(e){
+    endDrag();
+    if (moved < 5 && e.target === stageEl) { closePanel(); }
+  });
+  stageEl.addEventListener('pointercancel', endDrag);
+
+  stageEl.addEventListener('wheel', function(e){
+    e.preventDefault();
+    const factor = Math.exp(-e.deltaY * 0.0016);
+    zoomAt(e.clientX, e.clientY, factor);
+  }, { passive:false });
+
+  function zoomAt(px, py, factor){
+    const ns = Math.max(0.12, Math.min(2.4, sc * factor));
+    const k = ns / sc;
+    tx = px - (px - tx) * k;
+    ty = py - (py - ty) * k;
+    sc = ns;
+    apply();
+  }
+
+  /* pinch */
+  const pts = {};
+  let pinchDist = 0;
+  stageEl.addEventListener('pointerdown', function(e){ pts[e.pointerId] = e; });
+  stageEl.addEventListener('pointermove', function(e){
+    if (!(e.pointerId in pts)) { return; }
+    pts[e.pointerId] = e;
+    const ids = Object.keys(pts);
+    if (ids.length === 2) {
+      dragging = false;
+      const a = pts[ids[0]], b = pts[ids[1]];
+      const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      if (pinchDist) {
+        zoomAt((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2, d / pinchDist);
+      }
+      pinchDist = d;
+    }
+  });
+  function clearPt(e){ delete pts[e.pointerId]; if (Object.keys(pts).length < 2) { pinchDist = 0; } }
+  stageEl.addEventListener('pointerup', clearPt);
+  stageEl.addEventListener('pointercancel', clearPt);
+
+  /* ---- controls ---- */
+  document.getElementById('next').addEventListener('click', function(){ setStage(stage + 1); });
+  document.getElementById('prev').addEventListener('click', function(){ setStage(stage - 1); });
+  document.getElementById('all').addEventListener('click', function(){ setStage(MAXSTAGE); });
+  document.getElementById('fit').addEventListener('click', function(){ fitTo(visibleBox(), true); });
+  document.getElementById('zin').addEventListener('click', function(){
+    zoomAt(stageEl.clientWidth / 2, stageEl.clientHeight / 2, 1.25);
+  });
+  document.getElementById('zout').addEventListener('click', function(){
+    zoomAt(stageEl.clientWidth / 2, stageEl.clientHeight / 2, 0.8);
+  });
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); setStage(stage + 1); }
+    else if (e.key === 'ArrowLeft') { setStage(stage - 1); }
+    else if (e.key === 'Escape') { closePanel(); }
+    else if (e.key === '0') { fitTo(visibleBox(), true); }
+  });
+
+  window.addEventListener('resize', function(){ fitTo(visibleBox(), false); });
+
+  setStage(0, false);
+})();
+</script>
+</body>
+</html>
