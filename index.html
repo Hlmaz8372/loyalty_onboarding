@@ -408,6 +408,7 @@ body{
     { a:'tools', b:'vip', stage:2, cls:'tools' },
     { a:'tools', b:'program', stage:2, cls:'tools' },
     { a:'tools', b:'referral', stage:2, cls:'tools' },
+    { a:'audience', b:'tools', stage:2, cls:'aud' },
 
     { a:'tools', b:'reward', stage:3, cls:'rew', label:'drive?' },
     { a:'loyalty', b:'reward', stage:3, cls:'rew' },
@@ -416,15 +417,16 @@ body{
     { a:'reward', b:'cashback', stage:3, cls:'rew' },
 
     { a:'reward', b:'goal', stage:4, cls:'loop' },
-    { a:'goal', b:'customers', stage:4, cls:'loop', label:'the loop' }
+    { a:'goal', b:'customers', stage:4, cls:'loop', label:'the loop' },
+    { a:'referral', b:'customers', stage:4, cls:'loop', label:'referral' }
   ];
 
   const CAPTIONS = [
     'Start at the centre. <b>Loyalty</b> exists for exactly one outcome — the customer buys again.',
     'First branch: <b>who</b>. Customers become an audience the moment you can segment them, and each segment is reachable on a channel.',
-    'Second branch: <b>how</b>. Six tools, each one a piece of back-end <b>logic</b> plus a storefront <b>display</b>.',
+    'Second branch: <b>how</b>. The audience meets six tools, each one a piece of back-end <b>logic</b> plus a storefront <b>display</b>.',
     'Third branch: <b>what they get</b>. The tools drive toward a reward — and the shape of that reward is a margin decision.',
-    'And it closes. Reward drives the repeat purchase, the repeat purchase grows the customer base, and the loop turns again.'
+    'And it closes. Reward drives the repeat purchase, the repeat purchase feeds the customer base, and the loop turns again. <b>Referral</b> is the shortcut that widens it.'
   ];
 
   /* ============================================================
@@ -444,7 +446,7 @@ body{
   const stepsEl = document.getElementById('steps');
   const panel   = document.getElementById('panel');
 
-  const MAXSTAGE = 4;
+  const MAXSTAGE = CAPTIONS.length - 1;
   let stage = 0;
 
   /* ---- build nodes ---- */
