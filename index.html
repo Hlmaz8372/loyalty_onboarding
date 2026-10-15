@@ -21,6 +21,9 @@
   --aud:#5eead4;
   --tools:#a78bfa;
   --rew:#fb7185;
+  --shop:#a3d65c;
+  --real:#fbbf24;
+  --clone:#94a3b8;
   --shadow:0 10px 30px rgba(0,0,0,.45);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -31,14 +34,14 @@
   :root:not([data-theme="dark"]){
     --bg:#f4f6fa; --bg2:#eaeef5; --surface:#ffffff; --surface2:#f7f9fc;
     --line:#d8dee9; --text:#101521; --muted:#5d6779;
-    --core:#b97d06; --goal:#0b7fb8; --aud:#0d8f7c; --tools:#6d45d9; --rew:#d33b57;
+    --core:#b97d06; --goal:#0b7fb8; --aud:#0d8f7c; --tools:#6d45d9; --rew:#d33b57; --shop:#4d7c0f; --real:#b45309; --clone:#64748b;
     --shadow:0 10px 28px rgba(16,21,33,.12);
   }
 }
 :root[data-theme="light"]{
   --bg:#f4f6fa; --bg2:#eaeef5; --surface:#ffffff; --surface2:#f7f9fc;
   --line:#d8dee9; --text:#101521; --muted:#5d6779;
-  --core:#b97d06; --goal:#0b7fb8; --aud:#0d8f7c; --tools:#6d45d9; --rew:#d33b57;
+  --core:#b97d06; --goal:#0b7fb8; --aud:#0d8f7c; --tools:#6d45d9; --rew:#d33b57; --shop:#4d7c0f; --real:#b45309; --clone:#64748b;
   --shadow:0 10px 28px rgba(16,21,33,.12);
 }
 *,*::before,*::after{box-sizing:border-box}
@@ -56,8 +59,8 @@ body{
 /* ---------- canvas ---------- */
 #stage{position:absolute;inset:0;cursor:grab;touch-action:none;overflow:hidden}
 #stage.dragging{cursor:grabbing}
-#world{position:absolute;top:0;left:0;width:3000px;height:1620px;transform-origin:0 0}
-#wires{position:absolute;top:0;left:0;width:3000px;height:1620px;overflow:visible}
+#world{position:absolute;top:0;left:0;width:5400px;height:1620px;transform-origin:0 0}
+#wires{position:absolute;top:0;left:0;width:5400px;height:1620px;overflow:visible}
 
 .node{
   position:absolute;
@@ -114,6 +117,18 @@ body{
 .node.leaf[data-arm="tools"] .dot{background:var(--tools)}
 .node.leaf[data-arm="rew"] .dot{background:var(--rew)}
 
+.node.hub[data-arm="shop"]{border-color:color-mix(in srgb, var(--shop) 50%, var(--line))}
+.node.hub[data-arm="shop"] .dot{background:var(--shop)}
+.node.hub[data-arm="real"]{border-color:color-mix(in srgb, var(--real) 55%, var(--line))}
+.node.hub[data-arm="real"] .dot{background:var(--real)}
+.node.hub[data-arm="clone"]{border-color:color-mix(in srgb, var(--clone) 55%, var(--line));border-style:dashed}
+.node.hub[data-arm="clone"] .dot{background:var(--clone)}
+.node.leaf[data-arm="real"] .dot{background:var(--real)}
+.node.leaf[data-arm="clone"] .dot{background:var(--clone)}
+.node.leaf[data-arm="clone"]{border-style:dashed}
+.node.core[data-arm="shop"]{border-color:color-mix(in srgb, var(--shop) 55%, var(--line))}
+.node.core[data-arm="shop"] .sub{color:var(--shop)}
+
 .node.sel{border-color:var(--text)}
 
 .wire{fill:none;stroke:var(--line);stroke-width:2;opacity:0;transition:opacity .6s ease;stroke-linecap:round}
@@ -121,6 +136,10 @@ body{
 .wire.aud{stroke:color-mix(in srgb, var(--aud) 45%, var(--line))}
 .wire.tools{stroke:color-mix(in srgb, var(--tools) 45%, var(--line))}
 .wire.rew{stroke:color-mix(in srgb, var(--rew) 45%, var(--line))}
+.wire.shop{stroke:color-mix(in srgb, var(--shop) 45%, var(--line))}
+.wire.real{stroke:color-mix(in srgb, var(--real) 50%, var(--line))}
+.wire.clone{stroke:color-mix(in srgb, var(--clone) 55%, var(--line))}
+.wire.mirror{stroke:color-mix(in srgb, var(--clone) 60%, var(--line));stroke-width:2;stroke-dasharray:4 9}
 .wire.loop{stroke:color-mix(in srgb, var(--core) 55%, var(--line));stroke-width:2.5;stroke-dasharray:9 8}
 .wire.loop.on{opacity:.85;animation:flow 1.4s linear infinite}
 @keyframes flow{to{stroke-dashoffset:-34}}
@@ -211,7 +230,7 @@ body{
 
 <div id="stage">
   <div id="world">
-    <svg id="wires" viewBox="0 0 3000 1620" preserveAspectRatio="none" aria-hidden="true"></svg>
+    <svg id="wires" viewBox="0 0 5400 1620" preserveAspectRatio="none" aria-hidden="true"></svg>
     <div id="nodes"></div>
     <div id="elabels"></div>
   </div>
@@ -222,7 +241,7 @@ body{
   <div style="display:flex;gap:8px">
     <button class="btn icon" id="zin" title="Zoom in">+</button>
     <button class="btn icon" id="zout" title="Zoom out">−</button>
-    <button class="btn" id="fit">Fit</button>
+    <button class="btn" id="fit" title="See the whole board">Whole board</button>
   </div>
 </div>
 
@@ -389,7 +408,83 @@ body{
       tags:['Immediate','Discount'],
       lead:'Value handed back as a discount code after the order.',
       body:['Feels the most concrete to the shopper and converts the hardest — it reads as money.',
-            'Costs the most in margin and pulls the least, since a code can sit unused with no visible balance nagging at them. Pair it with an expiry.'] }
+            'Costs the most in margin and pulls the least, since a code can sit unused with no visible balance nagging at them. Pair it with an expiry.'] },
+
+    /* ============================================================
+       ISLAND 2 — our relationship with Shopify (accounts + clone)
+       ============================================================ */
+    { id:'shopify', island:'shopify', kind:'core', arm:'shop', stage:5, x:4400, y:300, label:'Shopify',
+      sub:'the platform', kicker:'Second island',
+      tags:['Platform','Accounts','Separate from loyalty'],
+      lead:'A different question from the loyalty island: not what the app does, but who we are to Shopify.',
+      body:['Everything YoYo ships lives under accounts Shopify owns the rules for. How those accounts are structured decides who can log in, who can be held responsible, and how much breaks if one account gets into trouble.',
+            'This island reads top-down: the platform, the two dashboards, the organization, then the people inside it.'] },
+
+    { id:'partners', island:'shopify', kind:'hub', arm:'shop', stage:5, x:4150, y:560, label:'Partners',
+      sub:'partners.shopify.com', kicker:'Dashboard',
+      tags:['Partner account'],
+      lead:'The partner side of Shopify: where an agency exists as a business.',
+      body:['One of the two front doors into an organization.',
+            'This is the layer that carries the account\'s standing with Shopify, which is why the agency keeps more than one.'] },
+
+    { id:'dev', island:'shopify', kind:'hub', arm:'shop', stage:5, x:4650, y:560, label:'Dev',
+      sub:'dev.shopify.com', kicker:'Dashboard',
+      tags:['Developer'],
+      lead:'The developer side of Shopify: where the app itself is built and managed.',
+      body:['The other front door into the same organization.',
+            'YoYo is on a real dev account here, under the YoYo organization.'] },
+
+    /* ---- left column: the real one ---- */
+    { id:'org-yoyo', island:'shopify', kind:'hub', arm:'real', stage:6, x:3850, y:820, label:'YoYo',
+      sub:'organization · real', kicker:'Organization',
+      tags:['Production','Real app'],
+      lead:'The real one. The live YoYo app, on a real dev account, under an organization also called YoYo.',
+      body:['As far as Shopify is concerned, every organization is a separate entity. That separation is the whole point of this island.',
+            'Everything real happens here: the listed app, real merchants, real reputation.'] },
+
+    { id:'owner-yoyo', island:'shopify', kind:'leaf', arm:'real', stage:6, x:3850, y:1060, label:'M T',
+      sub:'owner · just one', kicker:'Owner',
+      tags:['Exactly one'],
+      lead:'Every organization has exactly one owner.',
+      body:['The owner sits at the top of the people inside the organization. Everyone below them gets their access through it.'] },
+
+    { id:'admin-yoyo', island:'shopify', kind:'leaf', arm:'real', stage:6, x:3850, y:1280, label:'Admin',
+      sub:'can be one · name tbc', kicker:'Admin',
+      tags:['Usually one'],
+      lead:'Below the owner. There can be just one.',
+      body:['Who holds this seat on YoYo is still to be confirmed.'] },
+
+    { id:'user-yoyo', island:'shopify', kind:'leaf', arm:'real', stage:6, x:3850, y:1500, label:'cashlr2025',
+      sub:'user admin · our login', kicker:'User admin',
+      tags:['Day-to-day','Usually several'],
+      lead:'The account we actually log in with day to day.',
+      body:['User admins are the working seats. There are usually more than one per organization; this is the one the team uses.'] },
+
+    /* ---- right column: the clone ---- */
+    { id:'org-nova', island:'shopify', kind:'hub', arm:'clone', stage:7, x:4950, y:820, label:'Nova',
+      sub:'organization · clone', kicker:'Organization',
+      tags:['Test','Staging','Sandbox'],
+      lead:'The clone. Same structure as YoYo, a completely separate organization.',
+      body:['Nova is the test, staging and sandbox side. It mirrors YoYo layer for layer so work can be tried here first.',
+            'It is cloned for reputation: if one app, one store or one email goes down, the other side is not exposed and stays safe.'] },
+
+    { id:'owner-nova', island:'shopify', kind:'leaf', arm:'clone', stage:7, x:4950, y:1060, label:'MJ',
+      sub:'owner · just one', kicker:'Owner',
+      tags:['Exactly one'],
+      lead:'Nova\'s single owner. A different person from YoYo\'s owner on purpose.',
+      body:['Separate owners mean nothing ties the two organizations together at the top.'] },
+
+    { id:'admin-nova', island:'shopify', kind:'leaf', arm:'clone', stage:7, x:4950, y:1280, label:'Admin',
+      sub:'can be one · name tbc', kicker:'Admin',
+      tags:['Usually one'],
+      lead:'Mirrors the YoYo admin seat.',
+      body:['Who holds this seat on Nova is still to be confirmed.'] },
+
+    { id:'user-nova', island:'shopify', kind:'leaf', arm:'clone', stage:7, x:4950, y:1500, label:'Majagar99',
+      sub:'user admin · our login', kicker:'User admin',
+      tags:['Day-to-day','Usually several'],
+      lead:'The account we log in with on the Nova side.',
+      body:['A separate login from YoYo\'s, so a problem with one account never reaches the other.'] }
   ];
 
   const EDGES = [
@@ -418,7 +513,27 @@ body{
 
     { a:'reward', b:'goal', stage:4, cls:'loop' },
     { a:'goal', b:'customers', stage:4, cls:'loop', label:'the loop' },
-    { a:'referral', b:'customers', stage:4, cls:'loop', label:'referral' }
+    { a:'referral', b:'customers', stage:4, cls:'loop', label:'referral' },
+
+    /* ---- island 2 ---- */
+    { a:'shopify', b:'partners', stage:5, cls:'shop' },
+    { a:'shopify', b:'dev', stage:5, cls:'shop' },
+
+    { a:'partners', b:'org-yoyo', stage:6, cls:'real' },
+    { a:'dev', b:'org-yoyo', stage:6, cls:'real' },
+    { a:'org-yoyo', b:'owner-yoyo', stage:6, cls:'real' },
+    { a:'owner-yoyo', b:'admin-yoyo', stage:6, cls:'real' },
+    { a:'admin-yoyo', b:'user-yoyo', stage:6, cls:'real' },
+
+    { a:'partners', b:'org-nova', stage:7, cls:'clone' },
+    { a:'dev', b:'org-nova', stage:7, cls:'clone' },
+    { a:'org-nova', b:'owner-nova', stage:7, cls:'clone' },
+    { a:'owner-nova', b:'admin-nova', stage:7, cls:'clone' },
+    { a:'admin-nova', b:'user-nova', stage:7, cls:'clone' },
+    { a:'org-yoyo', b:'org-nova', stage:7, cls:'mirror', label:'cloned for reputation' },
+    { a:'owner-yoyo', b:'owner-nova', stage:7, cls:'mirror' },
+    { a:'admin-yoyo', b:'admin-nova', stage:7, cls:'mirror' },
+    { a:'user-yoyo', b:'user-nova', stage:7, cls:'mirror' }
   ];
 
   const CAPTIONS = [
@@ -426,14 +541,17 @@ body{
     'First branch: <b>who</b>. Customers become an audience the moment you can segment them, and each segment is reachable on a channel.',
     'Second branch: <b>how</b>. The audience meets six tools, each one a piece of back-end <b>logic</b> plus a storefront <b>display</b>.',
     'Third branch: <b>what they get</b>. The tools drive toward a reward — and the shape of that reward is a margin decision.',
-    'And it closes. Reward drives the repeat purchase, the repeat purchase feeds the customer base, and the loop turns again. <b>Referral</b> is the shortcut that widens it.'
+    'And it closes. Reward drives the repeat purchase, the repeat purchase feeds the customer base, and the loop turns again. <b>Referral</b> is the shortcut that widens it.',
+    'A second island. <b>Shopify</b> sits above everything we ship, and we reach it through two dashboards: <b>Partners</b> and <b>Dev</b>.',
+    'The real one. <b>YoYo</b> is the organization: one owner, an admin, and the user admin we log in with.',
+    'And the clone. <b>Nova</b> mirrors YoYo layer for layer, so if one app, store or email goes down, the other is never exposed.'
   ];
 
   /* ============================================================
      ENGINE
      ============================================================ */
 
-  const W = 3000, H = 1620;
+  const W = 5400, H = 1620;
   const byId = {};
   NODES.forEach(function(n){ byId[n.id] = n; });
 
@@ -540,10 +658,21 @@ body{
     apply();
   }
 
-  function visibleBox(){
+  function islandOf(n){ return n.island || 'loyalty'; }
+
+  function currentIsland(){
+    let island = 'loyalty';
+    NODES.forEach(function(n){ if (n.stage === stage) { island = islandOf(n); } });
+    return island;
+  }
+
+  function focusBox(){ return visibleBox(currentIsland()); }
+
+  function visibleBox(onlyIsland){
     let minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
     NODES.forEach(function(n){
       if (n.stage > stage) { return; }
+      if (onlyIsland && islandOf(n) !== onlyIsland) { return; }
       const r = n._el.getBoundingClientRect();
       const halfW = (r.width / sc) / 2 || 110;
       const halfH = (r.height / sc) / 2 || 40;
@@ -569,7 +698,7 @@ body{
     capEl.innerHTML = CAPTIONS[stage] || '';
     document.getElementById('prev').disabled = (stage === 0);
     document.getElementById('next').disabled = (stage === MAXSTAGE);
-    requestAnimationFrame(function(){ fitTo(visibleBox(), animate !== false); });
+    requestAnimationFrame(function(){ fitTo(focusBox(), animate !== false); });
   }
 
   /* ---- panel ---- */
@@ -667,7 +796,10 @@ body{
   /* ---- controls ---- */
   document.getElementById('next').addEventListener('click', function(){ setStage(stage + 1); });
   document.getElementById('prev').addEventListener('click', function(){ setStage(stage - 1); });
-  document.getElementById('all').addEventListener('click', function(){ setStage(MAXSTAGE); });
+  document.getElementById('all').addEventListener('click', function(){
+    setStage(MAXSTAGE);
+    requestAnimationFrame(function(){ requestAnimationFrame(function(){ fitTo(visibleBox(), true); }); });
+  });
   document.getElementById('fit').addEventListener('click', function(){ fitTo(visibleBox(), true); });
   document.getElementById('zin').addEventListener('click', function(){
     zoomAt(stageEl.clientWidth / 2, stageEl.clientHeight / 2, 1.25);
@@ -683,7 +815,7 @@ body{
     else if (e.key === '0') { fitTo(visibleBox(), true); }
   });
 
-  window.addEventListener('resize', function(){ fitTo(visibleBox(), false); });
+  window.addEventListener('resize', function(){ fitTo(focusBox(), false); });
 
   setStage(0, false);
 })();
